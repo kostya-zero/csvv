@@ -95,7 +95,7 @@ func BuildCmd() *cobra.Command {
 			}
 
 			if last != 0 && selectRow == 0 {
-				finalRows = append(finalRows, rows[last:]...)
+				finalRows = append(finalRows, rows[max(0, len(rows)-last):]...)
 				rowsModified = true
 			}
 
