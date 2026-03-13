@@ -1,0 +1,10 @@
+[env]
+CGO_ENABLED = "0"
+
+[tasks.app]
+description = "Run this app"
+run = "go run ."
+
+[tasks.build]
+description = "Build this app"
+run = "go build ."
