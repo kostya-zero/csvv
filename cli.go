@@ -26,19 +26,23 @@ func BuildCmd() *cobra.Command {
 		Short: "CSV Viewer",
 		Long:  "A CLI tool to inspect CSV data.",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
-				return errors.New("path to the file is required")
+				PrintFatal("path to the file is required")
+			}
+
+			if first != 0 && last != 0 {
+				PrintFatal("first and last should not be used at the same time")
 			}
 
 			file = args[0]
 			file, err := os.Open(file)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
-					return errors.New("file not found")
+					PrintFatal("file not found")
 				}
 
-				return fmt.Errorf("error opening file: %v", err)
+				PrintFatal(fmt.Sprintf("cannot open file: %v", err))
 			}
 
 			reader := csv.NewReader(file)
@@ -55,7 +59,7 @@ func BuildCmd() *cobra.Command {
 				}
 
 				if err != nil {
-					return fmt.Errorf("error reading record: %v", err)
+					PrintFatal(fmt.Sprintf("cannot read row: %s", err))
 				}
 
 				// Consider first row as header
@@ -107,8 +111,6 @@ func BuildCmd() *cobra.Command {
 
 			t.SetStyle(table.StyleLight)
 			t.Render()
-
-			return nil
 		},
 	}
 
