@@ -35,6 +35,10 @@ func BuildCmd() *cobra.Command {
 				PrintFatal("first and last should not be used at the same time")
 			}
 
+			if selectRow != 0 && (first != 0 || last != 0) {
+				PrintFatal("select cannot be combined with first or last flags")
+			}
+
 			file = args[0]
 			file, err := os.Open(file)
 			if err != nil {
@@ -72,6 +76,7 @@ func BuildCmd() *cobra.Command {
 					t.AppendHeader(header)
 				} else {
 					r := table.Row{}
+
 					r = append(r, recordIndex)
 					for _, col := range record {
 						r = append(r, col)
@@ -85,9 +90,10 @@ func BuildCmd() *cobra.Command {
 			var finalRows []table.Row
 			var rowsModified bool
 
-			if selectRow != 0 && last == 0 && first == 0 {
-				if len(args) > selectRow {
+			if selectRow != 0 {
+				if len(rows) > selectRow {
 					rows = []table.Row{rows[selectRow-1]}
+					rows[0][0] = 1
 				} else {
 					rows = []table.Row{}
 				}
@@ -100,6 +106,9 @@ func BuildCmd() *cobra.Command {
 
 			if last != 0 && selectRow == 0 {
 				finalRows = append(finalRows, rows[max(0, len(rows)-last):]...)
+				for i := range finalRows {
+					finalRows[i][0] = i + 1
+				}
 				rowsModified = true
 			}
 
@@ -109,7 +118,7 @@ func BuildCmd() *cobra.Command {
 				t.AppendRows(rows)
 			}
 
-			t.SetStyle(table.StyleLight)
+			t.SetStyle(table.StyleRounded)
 			t.Render()
 		},
 	}
