@@ -18,7 +18,62 @@ var (
 	columns     string
 	selectRow   int
 	recordIndex int
+	header      table.Row
+	rows        []table.Row
 )
+
+func verifyArgs(args *[]string) error {
+	if len(*args) == 0 {
+		return errors.New("path to the file is required")
+	}
+
+	if first != 0 && last != 0 {
+		return errors.New("first and last should not be used at the same time")
+	}
+
+	if selectRow != 0 && (first != 0 || last != 0) {
+		return errors.New("select cannot be combined with first or last flags")
+	}
+
+	return nil
+}
+
+func readRows(reader *csv.Reader) error {
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return fmt.Errorf("cannot read row: %s", err)
+		}
+
+		// Consider first row as header
+		if recordIndex == 0 {
+			header = append(header, "#")
+			for _, col := range record {
+				header = append(header, col)
+			}
+		} else {
+			if first != 0 && recordIndex > first {
+				break
+			}
+
+			r := table.Row{}
+
+			r = append(r, recordIndex)
+			for _, col := range record {
+				r = append(r, col)
+			}
+			rows = append(rows, r)
+		}
+
+		recordIndex++
+	}
+
+	return nil
+}
 
 func BuildCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
@@ -27,20 +82,11 @@ func BuildCmd() *cobra.Command {
 		Long:  "A CLI tool to inspect CSV data.",
 		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 0 {
-				PrintFatal("path to the file is required")
+			if err := verifyArgs(&args); err != nil {
+				PrintFatal(err.Error())
 			}
 
-			if first != 0 && last != 0 {
-				PrintFatal("first and last should not be used at the same time")
-			}
-
-			if selectRow != 0 && (first != 0 || last != 0) {
-				PrintFatal("select cannot be combined with first or last flags")
-			}
-
-			file = args[0]
-			file, err := os.Open(file)
+			file, err := os.Open(args[0])
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
 					PrintFatal("file not found")
@@ -50,42 +96,12 @@ func BuildCmd() *cobra.Command {
 			}
 
 			reader := csv.NewReader(file)
+			if err := readRows(reader); err != nil {
+				PrintFatal(err.Error())
+			}
 
-			// Printing table
 			t := table.NewWriter()
 			t.SetOutputMirror(os.Stdout)
-			var rows []table.Row
-
-			for {
-				record, err := reader.Read()
-				if err == io.EOF {
-					break
-				}
-
-				if err != nil {
-					PrintFatal(fmt.Sprintf("cannot read row: %s", err))
-				}
-
-				// Consider first row as header
-				if recordIndex == 0 {
-					header := table.Row{}
-					header = append(header, "#")
-					for _, col := range record {
-						header = append(header, col)
-					}
-					t.AppendHeader(header)
-				} else {
-					r := table.Row{}
-
-					r = append(r, recordIndex)
-					for _, col := range record {
-						r = append(r, col)
-					}
-					rows = append(rows, r)
-				}
-
-				recordIndex++
-			}
 
 			var finalRows []table.Row
 			var rowsModified bool
@@ -99,12 +115,7 @@ func BuildCmd() *cobra.Command {
 				}
 			}
 
-			if first != 0 && selectRow == 0 {
-				finalRows = append(finalRows, rows[:first]...)
-				rowsModified = true
-			}
-
-			if last != 0 && selectRow == 0 {
+			if last != 0 {
 				finalRows = append(finalRows, rows[max(0, len(rows)-last):]...)
 				for i := range finalRows {
 					finalRows[i][0] = i + 1
@@ -117,6 +128,8 @@ func BuildCmd() *cobra.Command {
 			} else {
 				t.AppendRows(rows)
 			}
+
+			t.AppendHeader(header)
 
 			t.SetStyle(table.StyleRounded)
 			t.Render()
