@@ -97,6 +97,7 @@ func BuildCmd() *cobra.Command {
 			if err := readRows(reader); err != nil {
 				PrintFatal(err.Error())
 			}
+			file.Close()
 
 			t := table.NewWriter()
 			t.SetOutputMirror(os.Stdout)
