@@ -14,8 +14,6 @@ import (
 var (
 	first       int
 	last        int
-	file        string
-	columns     string
 	selectRow   int
 	recordIndex int
 	header      table.Row
@@ -107,7 +105,7 @@ func BuildCmd() *cobra.Command {
 			var rowsModified bool
 
 			if selectRow != 0 {
-				if len(rows) > selectRow {
+				if len(rows) >= selectRow {
 					rows = []table.Row{rows[selectRow-1]}
 					rows[0][0] = 1
 				} else {
@@ -139,7 +137,6 @@ func BuildCmd() *cobra.Command {
 	rootCmd.Flags().IntVar(&first, "first", 0, "select some amount of rows from top")
 	rootCmd.Flags().IntVar(&last, "last", 0, "select some amount of rows from bottom")
 	rootCmd.Flags().IntVar(&selectRow, "select", 0, "select specific row")
-	rootCmd.Flags().StringVar(&columns, "columns", "", "columns to select for display")
 
 	return rootCmd
 }
