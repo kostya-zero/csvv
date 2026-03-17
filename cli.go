@@ -9,12 +9,13 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var (
-	first       int
-	last        int
-	selectRow   int
+	argFirst    int
+	argLast     int
+	argSelect   int
 	recordIndex int
 	header      table.Row
 	rows        []table.Row
@@ -25,11 +26,11 @@ func verifyArgs(args *[]string) error {
 		return errors.New("path to the file is required")
 	}
 
-	if first != 0 && last != 0 {
+	if argFirst != 0 && argLast != 0 {
 		return errors.New("first and last should not be used at the same time")
 	}
 
-	if selectRow != 0 && (first != 0 || last != 0) {
+	if argSelect != 0 && (argFirst != 0 || argLast != 0) {
 		return errors.New("select cannot be combined with first or last flags")
 	}
 
@@ -54,7 +55,7 @@ func readRows(reader *csv.Reader) error {
 				header = append(header, col)
 			}
 		} else {
-			if first != 0 && recordIndex > first {
+			if argFirst != 0 && recordIndex > argFirst {
 				break
 			}
 
@@ -83,6 +84,17 @@ func BuildCmd() *cobra.Command {
 			if err := verifyArgs(&args); err != nil {
 				PrintFatal(err.Error())
 			}
+			var termWidth int
+
+			fd := int(os.Stdout.Fd())
+			isTerminal := term.IsTerminal(fd)
+			if isTerminal {
+				width, _, err := term.GetSize(fd)
+				if err != nil {
+					PrintFatal("failed to get terminal size")
+				}
+				termWidth = width
+			}
 
 			file, err := os.Open(args[0])
 			if err != nil {
@@ -105,17 +117,17 @@ func BuildCmd() *cobra.Command {
 			var finalRows []table.Row
 			var rowsModified bool
 
-			if selectRow != 0 {
-				if len(rows) >= selectRow {
-					rows = []table.Row{rows[selectRow-1]}
+			if argSelect != 0 {
+				if len(rows) >= argSelect {
+					rows = []table.Row{rows[argSelect-1]}
 					rows[0][0] = 1
 				} else {
 					rows = []table.Row{}
 				}
 			}
 
-			if last != 0 {
-				finalRows = append(finalRows, rows[max(0, len(rows)-last):]...)
+			if argLast != 0 {
+				finalRows = append(finalRows, rows[max(0, len(rows)-argLast):]...)
 				for i := range finalRows {
 					finalRows[i][0] = i + 1
 				}
@@ -131,13 +143,17 @@ func BuildCmd() *cobra.Command {
 			t.AppendHeader(header)
 
 			t.SetStyle(table.StyleRounded)
+			if isTerminal {
+				t.Style().Size.WidthMax = termWidth
+			}
+
 			t.Render()
 		},
 	}
 
-	rootCmd.Flags().IntVar(&first, "first", 0, "select some amount of rows from top")
-	rootCmd.Flags().IntVar(&last, "last", 0, "select some amount of rows from bottom")
-	rootCmd.Flags().IntVar(&selectRow, "select", 0, "select specific row")
+	rootCmd.Flags().IntVar(&argFirst, "first", 0, "select some amount of rows from top")
+	rootCmd.Flags().IntVar(&argLast, "last", 0, "select some amount of rows from bottom")
+	rootCmd.Flags().IntVar(&argSelect, "select", 0, "select specific row")
 
 	return rootCmd
 }
