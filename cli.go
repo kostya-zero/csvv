@@ -13,12 +13,13 @@ import (
 )
 
 var (
-	argFirst  int
-	argLast   int
-	argSelect int
-	argCsv    bool
-	header    table.Row
-	rows      []table.Row
+	argFirst     int
+	argLast      int
+	argSelect    int
+	argHideIndex bool
+	argCsv       bool
+	header       table.Row
+	rows         []table.Row
 )
 
 func verifyArgs(args *[]string) error {
@@ -51,7 +52,9 @@ func readRows(reader *csv.Reader) error {
 
 		// Consider first row as header
 		if recordIndex == 0 {
-			header = append(header, "#")
+			if !argHideIndex {
+				header = append(header, "#")
+			}
 			for _, col := range record {
 				header = append(header, col)
 			}
@@ -62,7 +65,9 @@ func readRows(reader *csv.Reader) error {
 
 			r := table.Row{}
 
-			r = append(r, recordIndex)
+			if !argHideIndex {
+				r = append(r, recordIndex)
+			}
 			for _, col := range record {
 				r = append(r, col)
 			}
@@ -121,7 +126,9 @@ func BuildCmd() *cobra.Command {
 			if argSelect != 0 {
 				if len(rows) >= argSelect {
 					rows = []table.Row{rows[argSelect-1]}
-					rows[0][0] = 1
+					if !argHideIndex {
+						rows[0][0] = 1
+					}
 				} else {
 					rows = []table.Row{}
 				}
@@ -129,8 +136,10 @@ func BuildCmd() *cobra.Command {
 
 			if argLast != 0 {
 				finalRows = append(finalRows, rows[max(0, len(rows)-argLast):]...)
-				for i := range finalRows {
-					finalRows[i][0] = i + 1
+				if !argHideIndex {
+					for i := range finalRows {
+						finalRows[i][0] = i + 1
+					}
 				}
 				rowsModified = true
 			}
@@ -160,6 +169,7 @@ func BuildCmd() *cobra.Command {
 	rootCmd.Flags().IntVar(&argLast, "last", 0, "select some amount of rows from bottom")
 	rootCmd.Flags().IntVar(&argSelect, "select", 0, "select specific row")
 	rootCmd.Flags().BoolVar(&argCsv, "csv", false, "display data as CSV")
+	rootCmd.Flags().BoolVar(&argHideIndex, "hide-index", false, "do not show index in final table")
 
 	return rootCmd
 }
