@@ -8,7 +8,7 @@ A CLI tool to inspect CSV structured data.
 
 Download binary from [GitHub Releases](https://github.com/kostya-zero/csvv/releases) for you system.
 
-### With Go toolchain
+### With Go
 
 If you have Go installed you can run this command to install it:
 
@@ -26,4 +26,10 @@ csvv data.csv
 csvv data.csv --first 7
 csvv data.csv --last 3
 csvv data.csv --select 103
+
+# Export back to CSV
+csvv data.csv --csv
 ```
+
+
+
