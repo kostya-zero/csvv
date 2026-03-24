@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	argFirst    int
-	argLast     int
-	argSelect   int
-	recordIndex int
-	header      table.Row
-	rows        []table.Row
+	argFirst  int
+	argLast   int
+	argSelect int
+	argCsv    bool
+	header    table.Row
+	rows      []table.Row
 )
 
 func verifyArgs(args *[]string) error {
@@ -38,6 +38,7 @@ func verifyArgs(args *[]string) error {
 }
 
 func readRows(reader *csv.Reader) error {
+	var recordIndex int
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -147,13 +148,18 @@ func BuildCmd() *cobra.Command {
 				t.Style().Size.WidthMax = termWidth
 			}
 
-			t.Render()
+			if argCsv {
+				t.RenderCSV()
+			} else {
+				t.Render()
+			}
 		},
 	}
 
 	rootCmd.Flags().IntVar(&argFirst, "first", 0, "select some amount of rows from top")
 	rootCmd.Flags().IntVar(&argLast, "last", 0, "select some amount of rows from bottom")
 	rootCmd.Flags().IntVar(&argSelect, "select", 0, "select specific row")
+	rootCmd.Flags().BoolVar(&argCsv, "csv", false, "display data as CSV")
 
 	return rootCmd
 }
